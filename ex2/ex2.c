@@ -99,19 +99,30 @@ void printHeapStatistic()
  * Print Heap Usage Statistics
  *********************************************************/
 {
-    //TODO: Copy over your completed function from ex1 here
+    int usedHeapSize = 0;
+    int occupiedPartitions = 0;
+    int holes = 0;
 
+    partInfo* current;
+    for (current = hmi.pListHead; current != NULL; current = current->nextPart) {
+        if (current->status == 1) {
+            usedHeapSize += current->size;
+            occupiedPartitions++;
+        } else {
+            holes++;
+        }
+    }
 
     printf("\nHeap Usage Statistics:\n");
     printf("======================\n");
 
     printf("Total Space: %d bytes\n", hmi.totalSize);
 
-    printf("Total Occupied Partitions: %d\n", 0);
-    printf("\tTotal Occupied Size: %d bytes\n", 0);
+    printf("Total Occupied Partitions: %d\n", occupiedPartitions);
+    printf("\tTotal Occupied Size: %d bytes\n", usedHeapSize);
 
-    printf("Total Number of Holes: %d\n", 0);
-    printf("\tTotal Hole Size: %d bytes\n", 0);
+    printf("Total Number of Holes: %d\n", holes);
+    printf("\tTotal Hole Size: %d bytes\n", hmi.totalSize - usedHeapSize);
 }
 
 int setupHeap(int initialSize)
@@ -175,6 +186,7 @@ void* mymalloc(int size)
     //       Best-Fit
 
 	partInfo *current = hmi.pListHead;
+    partInfo *chosen = NULL;
 
     //We need to make sure the size is word
     // aligned, i.e. if the word size is 4 bytes, the size need to be
@@ -189,24 +201,31 @@ void* mymalloc(int size)
     size = (size - 1) / 4 * 4 + 4;
  
     //First-fit algorithm
-	while ( current != NULL && 
-			(current->status == OCCUPIED || current->size < size) ){
+	//while ( current != NULL && 
+	//		(current->status == OCCUPIED || current->size < size) ){
 
-		current = current->nextPart;
-	}
+	//	current = current->nextPart;
+	//}
+    
+    for (; current != NULL; current = current->nextPart) {
+        if (current->size < size || current->status == OCCUPIED) continue;
+        else if (chosen == NULL || chosen->size > current->size){
+            chosen = current;
+        }
+    }
 
-    if (current == NULL){	//heap full
+    if (chosen == NULL){	//heap full
 		return NULL;
 	}
 
 	//Do we need to split the partition?
-	if (current->size > size) {
-		splitPart(current, size);
+	if (chosen->size > size) {
+		splitPart(chosen, size);
 	}
 
-	current->status = OCCUPIED;
+	chosen->status = OCCUPIED;
 	
-	return (void*)hmi.base + current->offset;
+	return (void*)hmi.base + chosen->offset;
 }
 
 void myfree(void* address)
