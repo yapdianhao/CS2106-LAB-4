@@ -107,7 +107,7 @@ void printHeapStatistic()
 
     partInfo* current;
     for (current = hmi.pListHead; current != NULL; current = current->nextPart) {
-        if (current->status == 1) {
+        if (current->status == OCCUPIED) {
             usedHeapSize += current->size;
             occupiedPartitions++;
         } else {
