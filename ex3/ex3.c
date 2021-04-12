@@ -72,7 +72,7 @@ unsigned int buddyOf( unsigned int addr, unsigned int lvl )
 
 unsigned int powerOf(int base, int power) {
     if (power == 1) return base;
-    return powerOf(base * base, power - 1); 
+    return base * powerOf(base, power - 1); 
 }
 
 partInfo* buildPartitionInfo(unsigned int offset)
@@ -206,7 +206,6 @@ partInfo* removePartitionAtLevel(unsigned int lvl)
  * Return the Partition Structure if found.
  *********************************************************/
 {
-    printf("%d\n", hmi.A[lvl]);
     if (lvl > hmi.maxIdx) {
         //printf("here1\n");
         return NULL;
@@ -214,14 +213,15 @@ partInfo* removePartitionAtLevel(unsigned int lvl)
         //printf("here2\n");
         //partInfo* curr = removePartitionAtLevel(lvl + 1);
         //hmi.A[lvl] = removePartitionAtLevel(lvl + 1);;
-        hmi.A[lvl] = buildPartitionInfo(0);
+        hmi.A[lvl] = buildPartitionInfo(powerOf(2, lvl));
         return removePartitionAtLevel(lvl + 1);;
         //return hmi.A[lvl];
     } else {
         //printf("here3\n");
         partInfo* curr = hmi.A[lvl];
         hmi.A[lvl] = hmi.A[lvl]->nextPart;
-        return buildPartitionInfo(powerOf(2, lvl - 1));
+        //return buildPartitionInfo(powerOf(2, lvl - 1));
+        return curr;
     }
 }
 
@@ -249,6 +249,9 @@ int setupHeap(int initialSize)
     //       
     hmi.maxIdx = log2Floor(initialSize); //change this!
     hmi.A = (partInfo**) malloc((hmi.maxIdx + 1) * sizeof(partInfo*));
+    for (int i = 0; i < hmi.maxIdx; i++) {
+        hmi.A[i] = NULL;
+    }
     hmi.A[hmi.maxIdx] = buildPartitionInfo(0);
 
     return 1;
@@ -265,9 +268,8 @@ void* mymalloc(int size)
 {
     //TODO: Task 2. Implement the allocation using buddy allocator
     int level = log2Floor(size);
-    removePartitionAtLevel(level);
-    return NULL;
-
+    partInfo* chosen = removePartitionAtLevel(level);
+    return (void*) hmi.base + chosen->offset;
 }
 
 void myfree(void* address, int size)
