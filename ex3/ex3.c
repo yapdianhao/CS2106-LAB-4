@@ -192,7 +192,28 @@ void addPartitionAtLevel( unsigned int lvl, unsigned int offset )
  *      at higher level
  *********************************************************/
 {
-  
+    int buddy = buddyOf(offset,lvl);
+    printf("buddy of %d is %d\n", offset, buddy);
+    if (hmi.A[lvl] == NULL) {
+      hmi.A[lvl] = buildPartitionInfo(offset);
+    } else {
+        partInfo* curr = hmi.A[lvl];
+        while (curr->offset < offset && curr->offset != buddy) {
+            curr = curr->nextPart;
+        }
+        if (curr->offset == buddy) {
+            hmi.A[lvl] = curr->nextPart;
+            if (buddy > offset) {
+                addPartitionAtLevel(lvl + 1, offset);
+            } else {
+                addPartitionAtLevel(lvl + 1, buddy);
+            }
+        } else if (curr->offset > offset) {
+            partInfo* new = buildPartitionInfo(offset);
+            new->nextPart = curr;
+            hmi.A[lvl] = new;
+        }
+    }
 }
 
 partInfo* removePartitionAtLevel(unsigned int lvl)
@@ -280,4 +301,8 @@ void myfree(void* address, int size)
  *********************************************************/
 {
     //TODO: Task 3. Implement the de allocation using buddy allocator
+    int level = log2Floor(size);
+    int addr = (char*) address - (char*)hmi.base;
+    addPartitionAtLevel(level, addr);
+    printf("calculated address is : %d\n", addr);
 }
