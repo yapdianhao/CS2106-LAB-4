@@ -213,8 +213,9 @@ partInfo* removePartitionAtLevel(unsigned int lvl)
         //printf("here2\n");
         //partInfo* curr = removePartitionAtLevel(lvl + 1);
         //hmi.A[lvl] = removePartitionAtLevel(lvl + 1);;
-        hmi.A[lvl] = buildPartitionInfo(powerOf(2, lvl));
-        return removePartitionAtLevel(lvl + 1);;
+        partInfo* prev = removePartitionAtLevel(lvl + 1);
+        hmi.A[lvl] = buildPartitionInfo(prev->offset + powerOf(2, lvl));
+        return prev;
         //return hmi.A[lvl];
     } else {
         //printf("here3\n");
