@@ -20,6 +20,7 @@ for the 2nd member if  you are on a team
  *********************************************************/
 static heapMetaInfo hmi;
 
+int internalFragmentationSize = 0;
 
 /**********************************************************
  * Quality of life helper functions / macros
@@ -168,6 +169,16 @@ void printHeapStatistic()
  *********************************************************/
 {
     //TODO: Task 4. Calculate and report the various statistics
+    int freeSize = 0;
+    int freePartitions = 0;
+    for (int i = 0; i < hmi.maxIdx; i++) {
+        partInfo* curr = hmi.A[i];
+        while (curr != NULL) {
+            freeSize += curr->offset;
+            curr = curr->nextPart;
+            freePartitions++;
+        }
+    }
 
     printf("\nHeap Usage Statistics:\n");
     printf("======================\n");
@@ -178,10 +189,10 @@ void printHeapStatistic()
 
     printf("Total Space: %d bytes\n", hmi.totalSize);
     
-    printf("Total Free Partitions: %d\n", 0);
-    printf("Total Free Size: %d bytes\n", 0);
+    printf("Total Free Partitions: %d\n", freePartitions);
+    printf("Total Free Size: %d bytes\n", freeSize);
 
-    printf("Total Internal Fragmentation: %d bytes\n", 0);
+    printf("Total Internal Fragmentation: %d bytes\n", internalFragmentationSize);
 }
 
 void addPartitionAtLevel( unsigned int lvl, unsigned int offset )
@@ -193,7 +204,6 @@ void addPartitionAtLevel( unsigned int lvl, unsigned int offset )
  *********************************************************/
 {
     int buddy = buddyOf(offset,lvl);
-    printf("buddy of %d is %d\n", offset, buddy);
     if (hmi.A[lvl] == NULL) {
       hmi.A[lvl] = buildPartitionInfo(offset);
     } else {
@@ -289,8 +299,9 @@ void* mymalloc(int size)
  *********************************************************/
 {
     //TODO: Task 2. Implement the allocation using buddy allocator
-    int level = log2Floor(size);
+    int level = log2Ceiling(size);
     partInfo* chosen = removePartitionAtLevel(level);
+    internalFragmentationSize += powerOf(2, level) - size;
     return (void*) hmi.base + chosen->offset;
 }
 
@@ -301,8 +312,8 @@ void myfree(void* address, int size)
  *********************************************************/
 {
     //TODO: Task 3. Implement the de allocation using buddy allocator
-    int level = log2Floor(size);
+    int level = log2Ceiling(size);
+    internalFragmentationSize -= powerOf(2, level) - size;
     int addr = (char*) address - (char*)hmi.base;
     addPartitionAtLevel(level, addr);
-    printf("calculated address is : %d\n", addr);
 }
