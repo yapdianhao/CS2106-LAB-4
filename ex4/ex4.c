@@ -174,10 +174,11 @@ void printHeapStatistic()
     //TODO: Task 4. Calculate and report the various statistics
     int freeSize = 0;
     int freePartitions = 0;
-    for (int i = 0; i < hmi.maxIdx; i++) {
+    //printf("maxIdx: %d\n", hmi.maxIdx);
+    for (int i = 0; i < hmi.maxIdx + 1; i++) {
         partInfo* curr = hmi.A[i];
         while (curr != NULL) {
-            freeSize += curr->offset;
+            freeSize += powerOf(2, i);
             curr = curr->nextPart;
             freePartitions++;
         }
@@ -186,7 +187,6 @@ void printHeapStatistic()
     printf("\nHeap Usage Statistics:\n");
     printf("======================\n");
 
-    printf("Total Space: %d bytes\n", hmi.totalSize);
 
     //Remember to preserve the message format!
 
@@ -207,24 +207,67 @@ void addPartitionAtLevel( unsigned int lvl, unsigned int offset )
      *********************************************************/
 {
     int buddy = buddyOf(offset,lvl);
+    //printf("buddy: %d\n", buddy);
     if (hmi.A[lvl] == NULL) {
         hmi.A[lvl] = buildPartitionInfo(offset);
     } else {
         partInfo* curr = hmi.A[lvl];
-        while (curr->offset < offset && curr->offset != buddy) {
+        partInfo* prev = NULL;
+        while (curr->nextPart != NULL && curr->nextPart->offset < offset && curr->offset != buddy) {
+            prev = curr;
             curr = curr->nextPart;
         }
         if (curr->offset == buddy) {
-            hmi.A[lvl] = curr->nextPart;
+            if (prev == NULL) hmi.A[lvl] = curr->nextPart;
+            else prev->nextPart = curr->nextPart;
             if (buddy > offset) {
                 addPartitionAtLevel(lvl + 1, offset);
             } else {
                 addPartitionAtLevel(lvl + 1, buddy);
             }
-        } else if (curr->offset > offset) {
+        }
+        else if (curr->nextPart == NULL) {
+            if (curr->offset > offset) {
+                partInfo* new = buildPartitionInfo(offset);
+                new->nextPart = curr;
+                if (prev == NULL) {
+                    hmi.A[lvl] = new;
+                } else {
+                    prev->nextPart = new;
+                }
+            } else {
+                partInfo* new = buildPartitionInfo(offset);
+                curr->nextPart = new;
+                if (prev == NULL) {
+                    hmi.A[lvl] = curr;
+                } else {
+                    prev->nextPart = curr;
+                }
+            }
+        } 
+        else if (curr->nextPart->offset == buddy) {
+            //if (prev == NULL) hmi.A[lvl] = curr->nextPart->nextPart;
+            curr->nextPart = curr->nextPart->nextPart;
+            if (buddy > offset) {
+                addPartitionAtLevel(lvl + 1, offset);
+            } else {
+                addPartitionAtLevel(lvl + 1, buddy);
+            }
+        } 
+        //else if (curr->offset > offset) {
+        //    partInfo* new = buildPartitionInfo(offset);
+        //    new->nextPart = curr;
+        //    hmi.A[lvl] = new;
+        //}
+        else if (curr->offset < buddy){
+            partInfo* next = curr->nextPart;
+            curr->nextPart = buildPartitionInfo(offset);
+            curr->nextPart->nextPart = next;
+        } else {
             partInfo* new = buildPartitionInfo(offset);
             new->nextPart = curr;
-            hmi.A[lvl] = new;
+            if (prev != NULL) prev->nextPart = new;
+            else hmi.A[lvl] = new;
         }
     }
 }
@@ -248,7 +291,7 @@ partInfo* removePartitionAtLevel(unsigned int lvl)
         //partInfo* curr = removePartitionAtLevel(lvl + 1);
         //hmi.A[lvl] = removePartitionAtLevel(lvl + 1);;
         partInfo* prev = removePartitionAtLevel(lvl + 1);
-        hmi.A[lvl] = buildPartitionInfo(prev->offset + powerOf(2, lvl));
+        if (prev != NULL) hmi.A[lvl] = buildPartitionInfo(prev->offset + powerOf(2, lvl));
         return prev;
         //return hmi.A[lvl];
     } else {
@@ -277,21 +320,10 @@ int setupHeap(int initialSize, int minSize, int maxSize)
     allocMaxSize = maxSize;
 
     hmi.base = base;
+    int inputSize = initialSize;
 
-    hmi.totalSize = initialSize;
-    hmi.internalFragTotal = 0;
-
-    //TODO: Task 1. Setup the rest of the bookkeeping info:
-    //       hmi.A <= an array of partition linked list
-    //       hmi.maxIdx <= the largest index for hmi.A[]
-    //       
-    hmi.maxIdx = log2Floor(initialSize); //change this!
-    hmi.A = (partInfo**) malloc((hmi.maxIdx + 1) * sizeof(partInfo*));
-    for (int i = 0; i < hmi.maxIdx; i++) {
-        hmi.A[i] = NULL;
-    }
-    int lastOffset = 0;
-    int totalSize = 0;
+    int adjustedSize = 0;
+    int lastAdded = 0;
     while (initialSize > 0) {
         int S = log2Floor(initialSize);
         if (powerOf(2, S) >= maxSize) {
@@ -299,22 +331,78 @@ int setupHeap(int initialSize, int minSize, int maxSize)
         } else if (powerOf(2, S) <= minSize) {
             S = log2Floor(minSize);
         }
-        totalSize += powerOf(2, S);
-        printf("%d %d\n", initialSize, S);
-        if (totalSize < hmi.totalSize) {
-            if (hmi.A[S] == NULL) {
-                hmi.A[S] = buildPartitionInfo(lastOffset);
-            } else {
-                partInfo* curr = hmi.A[S];
-                while(curr->nextPart != NULL) {
-                    curr = curr->nextPart;
-                }
-                curr->nextPart = buildPartitionInfo(lastOffset);
-            }
-        }
-        lastOffset += powerOf(2, S);
-        initialSize -= powerOf(2, S);
+        lastAdded = powerOf(2, S);
+        adjustedSize += lastAdded;
+        initialSize -= lastAdded;
+        //printf("%d %d\n", adjustedSize, initialSize);
     }
+    //printf("adjusted: %d\n", adjustedSize);
+    if (adjustedSize > inputSize) adjustedSize -= lastAdded;
+    //printf("deducted: %d\n", adjustedSize);
+
+    hmi.totalSize = adjustedSize;
+    hmi.internalFragTotal = 0;
+
+    //TODO: Task 1. Setup the rest of the bookkeeping info:
+    //       hmi.A <= an array of partition linked list
+    //       hmi.maxIdx <= the largest index for hmi.A[]
+    //       
+    hmi.maxIdx = adjustedSize > maxSize ? log2Floor(maxSize) : log2Floor(adjustedSize);
+    hmi.A = (partInfo**) malloc((hmi.maxIdx + 1) * sizeof(partInfo*));
+    for (int i = 0; i < hmi.maxIdx; i++) {
+        hmi.A[i] = NULL;
+    }
+    int lastOffset = 0;
+
+    while (adjustedSize > 0) {
+        int S = log2Floor(adjustedSize);
+        if (powerOf(2, S) >= maxSize) {
+            S = log2Floor(maxSize);
+        } else if (powerOf(2, S) <= minSize) {
+            S = log2Floor(minSize);
+        } 
+        if (hmi.A[S] == NULL) {
+            hmi.A[S] = buildPartitionInfo(lastOffset);
+        } else {
+            partInfo* curr = hmi.A[S];
+            while (curr->nextPart != NULL) {
+                curr = curr->nextPart;
+            }
+            curr->nextPart = buildPartitionInfo(lastOffset);
+        }
+       //printf("loop: %d\n", adjustedSize);
+       lastOffset += powerOf(2, S);
+       adjustedSize -= powerOf(2, S);
+    }
+    //printf("%d\n", adjustedSize);
+
+
+
+   // while (initialSize > 0) {
+   //     int S = log2Floor(initialSize);
+   //     printf("initial size: %d\n", initialSize); 
+   //     if (powerOf(2, S) >= maxSize) {
+   //         S = log2Floor(maxSize);
+   //     } else if (powerOf(2, S) <= minSize) {
+  //          S = log2Floor(minSize);
+  //      }
+  //      totalSize += powerOf(2, S);
+  //      //printf("%d %d\n", initialSize, totalSize);
+  //      //printf("%d\n", totalSize < hmi.totalSize);
+  //      if (totalSize <= hmi.totalSize) {
+  //          if (hmi.A[S] == NULL) {
+ //               hmi.A[S] = buildPartitionInfo(lastOffset);
+  //          } else {
+  //              partInfo* curr = hmi.A[S];
+  //              while(curr->nextPart != NULL) {
+  //                  curr = curr->nextPart;
+  //              }
+  //              curr->nextPart = buildPartitionInfo(lastOffset);
+  //          }
+  //      }
+  //      lastOffset += powerOf(2, S);
+  //      initialSize -= powerOf(2, S);
+  //  }
 
     return 1;
 }
@@ -335,9 +423,10 @@ void* mymalloc(int size)
     allocatedSize += size;
     int level = log2Ceiling(size);
     partInfo* chosen = removePartitionAtLevel(level);
-    internalFragmentationSize += powerOf(2, level) - size;
-    printf("allocatedSize: %d\n", allocatedSize);
-    return (void*) hmi.base + chosen->offset;
+    if (chosen != NULL) {
+        internalFragmentationSize += powerOf(2, level) - size;
+        return (void*) hmi.base + chosen->offset;
+    } else return NULL;
 }
 
 void myfree(void* address, int size)
@@ -353,5 +442,6 @@ void myfree(void* address, int size)
     int level = log2Ceiling(size);
     internalFragmentationSize -= powerOf(2, level) - size;
     int addr = (char*) address - (char*)hmi.base;
+    //printf("free offset: %d, size: %d, level: %d\n", addr, size, level);
     addPartitionAtLevel(level, addr);
 }
