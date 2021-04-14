@@ -22,7 +22,9 @@ for the 2nd member if  you are on a team
 static heapMetaInfo hmi;
 
 static sem_t mutex;
+static sem_t temp;
 static int concurrentMemOp = 0;
+
 
 int memOpIntegrity = 1;
 
@@ -131,6 +133,7 @@ int setupHeap(int initialSize)
 	
     //Setup Mutex for internal checking
     sem_init( &mutex, 0, 1 );
+    sem_init(&temp, 0, 1);
 	return 1;
 }
 
@@ -169,8 +172,10 @@ void memOpStart()
  *********************************************************/
 {    
     sem_wait( &mutex );
+    //sem_wait(&memMutex);
     concurrentMemOp++;
     sem_post( &mutex );
+   // sem_post(&memMutex);
 }
 
 void memOpEnd()
@@ -179,11 +184,13 @@ void memOpEnd()
  *********************************************************/
 {    
     sem_wait( &mutex );
+    //sem_wait(&memMutex);
     if (concurrentMemOp > 1){
         memOpIntegrity = 0;
     }
     concurrentMemOp--;
     sem_post( &mutex );
+    //sem_post(&memMutex);
 }
 
 
@@ -195,8 +202,8 @@ void* mymalloc(int size)
  *    Return NULL otherwise 
  *********************************************************/
 {
-
     //Checking for race condition
+    sem_wait(&temp);
     memOpStart();
 
     partInfo *current = hmi.pListHead;
@@ -223,6 +230,7 @@ void* mymalloc(int size)
     if (current == NULL){	//heap full
         //Check for race condition
         memOpEnd();
+        sem_post(&temp);
 	    return NULL;
 	}
 
@@ -233,9 +241,11 @@ void* mymalloc(int size)
 	}
 
 	current->status = OCCUPIED;
+    
 
     //Check for race condition
     memOpEnd();
+    sem_post(&temp);
 
 	return hmi.base + current->offset;
 }
@@ -249,6 +259,7 @@ void myfree(void* address)
 	partInfo *toBeFreed;
     int partID;
 
+    sem_wait(&temp);
     //Checking for race condition
     memOpStart();
     
@@ -260,13 +271,13 @@ void myfree(void* address)
         toBeFreed = toBeFreed->nextPart){
 
         //Essentially an empty for-loop at the moment
-    
     }
 
     //Should not happen in this lab as we free only correct adddresses
     if (toBeFreed == NULL) {
         printf("MyFree(%p) failed! Exiting.\n", address);
         memOpEnd();
+        sem_post(&temp);
         exit(1);
     }
 
@@ -275,4 +286,5 @@ void myfree(void* address)
 
     //Check for race condition
     memOpEnd();
+    sem_post(&temp);
 }
