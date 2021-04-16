@@ -1,8 +1,8 @@
 /*************************************
 * Lab 4 Exercise 5
-* Name:
-* Student Id: A????????
-* Lab Group: B??
+* Name: Yap Dian Hao
+* Student Id: A0184679H
+* Lab Group: B13
 *************************************
 Note: Duplicate the above and fill in 
 for the 2nd member if  you are on a team

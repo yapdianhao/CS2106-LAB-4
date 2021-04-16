@@ -1,8 +1,8 @@
 /*************************************
  * Lab 4 Exercise 3
- * Name:
- * Student Id: A????????
- * Lab Group: B??
+ * Name: Yap Dian Hao
+ * Student Id: A0184679H
+ * Lab Group: B13
  *************************************
 Note: Duplicate the above and fill in 
 for the 2nd member if  you are on a team
@@ -174,7 +174,6 @@ void printHeapStatistic()
     //TODO: Task 4. Calculate and report the various statistics
     int freeSize = 0;
     int freePartitions = 0;
-    //printf("maxIdx: %d\n", hmi.maxIdx);
     for (int i = 0; i < hmi.maxIdx + 1; i++) {
         partInfo* curr = hmi.A[i];
         while (curr != NULL) {
@@ -207,7 +206,6 @@ void addPartitionAtLevel( unsigned int lvl, unsigned int offset )
      *********************************************************/
 {
     int buddy = buddyOf(offset,lvl);
-    //printf("buddy: %d\n", buddy);
     if (hmi.A[lvl] == NULL) {
         hmi.A[lvl] = buildPartitionInfo(offset);
     } else {
@@ -246,7 +244,6 @@ void addPartitionAtLevel( unsigned int lvl, unsigned int offset )
             }
         } 
         else if (curr->nextPart->offset == buddy) {
-            //if (prev == NULL) hmi.A[lvl] = curr->nextPart->nextPart;
             curr->nextPart = curr->nextPart->nextPart;
             if (buddy > offset) {
                 addPartitionAtLevel(lvl + 1, offset);
@@ -254,11 +251,6 @@ void addPartitionAtLevel( unsigned int lvl, unsigned int offset )
                 addPartitionAtLevel(lvl + 1, buddy);
             }
         } 
-        //else if (curr->offset > offset) {
-        //    partInfo* new = buildPartitionInfo(offset);
-        //    new->nextPart = curr;
-        //    hmi.A[lvl] = new;
-        //}
         else if (curr->offset < buddy){
             partInfo* next = curr->nextPart;
             curr->nextPart = buildPartitionInfo(offset);
@@ -284,21 +276,14 @@ partInfo* removePartitionAtLevel(unsigned int lvl)
      *********************************************************/
 {
     if (lvl > hmi.maxIdx) {
-        //printf("here1\n");
         return NULL;
     } else if (hmi.A[lvl] == NULL) {
-        //printf("here2\n");
-        //partInfo* curr = removePartitionAtLevel(lvl + 1);
-        //hmi.A[lvl] = removePartitionAtLevel(lvl + 1);;
         partInfo* prev = removePartitionAtLevel(lvl + 1);
         if (prev != NULL) hmi.A[lvl] = buildPartitionInfo(prev->offset + powerOf(2, lvl));
         return prev;
-        //return hmi.A[lvl];
     } else {
-        //printf("here3\n");
         partInfo* curr = hmi.A[lvl];
         hmi.A[lvl] = hmi.A[lvl]->nextPart;
-        //return buildPartitionInfo(powerOf(2, lvl - 1));
         return curr;
     }
 }
@@ -334,11 +319,8 @@ int setupHeap(int initialSize, int minSize, int maxSize)
         lastAdded = powerOf(2, S);
         adjustedSize += lastAdded;
         initialSize -= lastAdded;
-        //printf("%d %d\n", adjustedSize, initialSize);
     }
-    //printf("adjusted: %d\n", adjustedSize);
     if (adjustedSize > inputSize) adjustedSize -= lastAdded;
-    //printf("deducted: %d\n", adjustedSize);
 
     hmi.totalSize = adjustedSize;
     hmi.internalFragTotal = 0;
@@ -370,39 +352,9 @@ int setupHeap(int initialSize, int minSize, int maxSize)
             }
             curr->nextPart = buildPartitionInfo(lastOffset);
         }
-       //printf("loop: %d\n", adjustedSize);
        lastOffset += powerOf(2, S);
        adjustedSize -= powerOf(2, S);
     }
-    //printf("%d\n", adjustedSize);
-
-
-
-   // while (initialSize > 0) {
-   //     int S = log2Floor(initialSize);
-   //     printf("initial size: %d\n", initialSize); 
-   //     if (powerOf(2, S) >= maxSize) {
-   //         S = log2Floor(maxSize);
-   //     } else if (powerOf(2, S) <= minSize) {
-  //          S = log2Floor(minSize);
-  //      }
-  //      totalSize += powerOf(2, S);
-  //      //printf("%d %d\n", initialSize, totalSize);
-  //      //printf("%d\n", totalSize < hmi.totalSize);
-  //      if (totalSize <= hmi.totalSize) {
-  //          if (hmi.A[S] == NULL) {
- //               hmi.A[S] = buildPartitionInfo(lastOffset);
-  //          } else {
-  //              partInfo* curr = hmi.A[S];
-  //              while(curr->nextPart != NULL) {
-  //                  curr = curr->nextPart;
-  //              }
-  //              curr->nextPart = buildPartitionInfo(lastOffset);
-  //          }
-  //      }
-  //      lastOffset += powerOf(2, S);
-  //      initialSize -= powerOf(2, S);
-  //  }
 
     return 1;
 }
@@ -442,6 +394,5 @@ void myfree(void* address, int size)
     int level = log2Ceiling(size);
     internalFragmentationSize -= powerOf(2, level) - size;
     int addr = (char*) address - (char*)hmi.base;
-    //printf("free offset: %d, size: %d, level: %d\n", addr, size, level);
     addPartitionAtLevel(level, addr);
 }
